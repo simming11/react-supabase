@@ -114,7 +114,11 @@ function EventBooking() {
 
     return (
         <div className="event-booking-container">
-            <h2>เลือกอีเวนต์ที่ต้องการจอง</h2>
+
+         <h2 className="text-4xl font-bold text-blue-600 mb-6 text-center shadow-lg">
+  เลือกอีเวนต์ที่ต้องการจอง
+</h2>
+
             <div className="events-list">
                 {events.map(event => (
                     <div className="event-card" key={event.id}>
