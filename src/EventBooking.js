@@ -116,15 +116,23 @@ function EventBooking() {
         <div className="event-booking-container">
             <h2>เลือกอีเวนต์ที่ต้องการจอง</h2>
             <div className="events-list">
-                {events.map(event => (
-                    <div className="event-card" key={event.id}>
-                        <h3 className="event-name">{event.name}</h3>
-                        <button onClick={() => handleBooking(event.id)}>
-                            จอง
-                        </button>
-                    </div>
-                ))}
-            </div>
+    {events.map(event => (
+      <div className="event-card" key={event.id}>
+        {/* Display the event image if available */}
+        {event.poster_url && (
+          <img
+            src={event.poster_url}
+            alt={`โปสเตอร์ของ ${event.name}`}
+            className="event-poster"
+          />
+        )}
+        <h3 className="event-name">{event.name}</h3>
+        <button onClick={() => handleBooking(event.id)}>
+          จอง
+        </button>
+      </div>
+    ))}
+  </div>
 
             {/* Modal */}
             {isModalOpen && (
