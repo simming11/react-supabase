@@ -24,247 +24,247 @@ function AdminDashboard() {
   });
   const navigate = useNavigate();
 
- // Fetch functions moved outside of useEffect
- const fetchReservations = async () => {
-  const offset = (currentPage - 1) * reservationsPerPage;
+  // Fetch functions moved outside of useEffect
+  const fetchReservations = async () => {
+    const offset = (currentPage - 1) * reservationsPerPage;
 
-  const { data: reservationData, error, count } = await supabase
-    .from('reservations')
-    .select('*', { count: 'exact' })
-    .order('reservation_date', { ascending: false })
-    .range(offset, offset + reservationsPerPage - 1);
+    const { data: reservationData, error, count } = await supabase
+      .from('reservations')
+      .select('*', { count: 'exact' })
+      .order('reservation_date', { ascending: false })
+      .range(offset, offset + reservationsPerPage - 1);
 
-  if (error) {
-    console.error('Error fetching reservations:', error.message);
-  } else {
-    setReservations(reservationData);
-    setTotalReservations(count);
-  }
-};
-
-const fetchEvents = async () => {
-  const { data: eventData, error } = await supabase
-    .from('events')
-    .select('*')
-    .order('start_time', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching events:', error.message);
-  } else {
-    setEvents(eventData);
-  }
-};
-
-useEffect(() => {
-  const fetchUserAndInitialData = async () => {
-    const storedUser = localStorage.getItem('adminUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    if (error) {
+      console.error('Error fetching reservations:', error.message);
     } else {
-      console.log('No user found in localStorage');
+      setReservations(reservationData);
+      setTotalReservations(count);
+    }
+  };
+
+  const fetchEvents = async () => {
+    const { data: eventData, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('start_time', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching events:', error.message);
+    } else {
+      setEvents(eventData);
+    }
+  };
+
+  useEffect(() => {
+    const fetchUserAndInitialData = async () => {
+      const storedUser = localStorage.getItem('adminUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        console.log('No user found in localStorage');
+      }
+
+      await fetchReservations(); // ดึงจองตอนโหลด
+      await fetchEvents();       // ดึงอีเวนต์ตอนโหลด
+    };
+
+    fetchUserAndInitialData();
+
+    // ✅ Realtime subscription: reservations
+    const reservationChannel = supabase
+      .channel('realtime:reservations')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'reservations',
+      }, (payload) => {
+        console.log('🔄 reservations changed:', payload);
+        fetchReservations(); // re-fetch
+      })
+      .subscribe();
+
+    // ✅ Realtime subscription: events
+    const eventsChannel = supabase
+      .channel('realtime:events')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'events',
+      }, (payload) => {
+        console.log('🔄 events changed:', payload);
+        fetchEvents(); // re-fetch
+      })
+      .subscribe();
+
+    // 🔚 Cleanup subscription
+    return () => {
+      supabase.removeChannel(reservationChannel);
+      supabase.removeChannel(eventsChannel);
+    };
+  }, [currentPage]);
+
+  // Handle input changes
+  const handleEventChange = (e) => {
+    const { name, value } = e.target;
+    setNewEvent({ ...newEvent, [name]: value });
+  };
+
+  // Handle file input for the poster image
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setNewEvent({ ...newEvent, poster: file });
+  };
+
+
+
+  const handleNextPage = () => {
+    if (currentPage * reservationsPerPage < totalReservations) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error logging out:', error.message);
+    } else {
+      setUser(null);
+      localStorage.removeItem('adminUser');
+      navigate('/');
+    }
+  };
+
+  const handleCreateEvent = async () => {
+    if (!newEvent.name || !newEvent.start_time || !newEvent.end_time) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
     }
 
-    await fetchReservations(); // ดึงจองตอนโหลด
-    await fetchEvents();       // ดึงอีเวนต์ตอนโหลด
-  };
+    let posterUrl = '';
 
-  fetchUserAndInitialData();
+    if (newEvent.poster) {
+      const fileExt = newEvent.poster.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `posters/${fileName}`;
 
-  // ✅ Realtime subscription: reservations
-  const reservationChannel = supabase
-    .channel('realtime:reservations')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'reservations',
-    }, (payload) => {
-      console.log('🔄 reservations changed:', payload);
-      fetchReservations(); // re-fetch
-    })
-    .subscribe();
+      try {
+        // 1️⃣ อัปโหลดรูปโปสเตอร์
+        const { error: uploadError } = await supabase.storage
+          .from('event-posters')
+          .upload(filePath, newEvent.poster);
 
-  // ✅ Realtime subscription: events
-  const eventsChannel = supabase
-    .channel('realtime:events')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'events',
-    }, (payload) => {
-      console.log('🔄 events changed:', payload);
-      fetchEvents(); // re-fetch
-    })
-    .subscribe();
+        if (uploadError) {
+          console.error('❌ Error uploading poster:', uploadError.message);
+          alert('ไม่สามารถอัพโหลดโปสเตอร์ได้');
+          return;
+        }
 
-  // 🔚 Cleanup subscription
-  return () => {
-    supabase.removeChannel(reservationChannel);
-    supabase.removeChannel(eventsChannel);
-  };
-}, [currentPage]);
+        // 2️⃣ สร้าง public URL สำหรับรูป
+        const { data: urlData } = supabase
+          .storage
+          .from('event-posters')
+          .getPublicUrl(filePath);
 
-// Handle input changes
-const handleEventChange = (e) => {
-  const { name, value } = e.target;
-  setNewEvent({ ...newEvent, [name]: value });
-};
-
-// Handle file input for the poster image
-const handleFileChange = (e) => {
-  const file = e.target.files[0];
-  setNewEvent({ ...newEvent, poster: file });
-};
-
-
-
-const handleNextPage = () => {
-  if (currentPage * reservationsPerPage < totalReservations) {
-    setCurrentPage(currentPage + 1);
-  }
-};
-
-const handlePrevPage = () => {
-  if (currentPage > 1) {
-    setCurrentPage(currentPage - 1);
-  }
-};
-
-const handleLogout = async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    console.error('Error logging out:', error.message);
-  } else {
-    setUser(null);
-    localStorage.removeItem('adminUser');
-    navigate('/');
-  }
-};
-
-const handleCreateEvent = async () => {
-  if (!newEvent.name || !newEvent.start_time || !newEvent.end_time) {
-    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-    return;
-  }
-
-  let posterUrl = '';
-
-  if (newEvent.poster) {
-    const fileExt = newEvent.poster.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `posters/${fileName}`;
-
-    try {
-      // 1️⃣ อัปโหลดรูปโปสเตอร์
-      const { error: uploadError } = await supabase.storage
-        .from('event-posters')
-        .upload(filePath, newEvent.poster);
-
-      if (uploadError) {
-        console.error('❌ Error uploading poster:', uploadError.message);
+        posterUrl = urlData.publicUrl;
+      } catch (error) {
+        console.error('❌ Unexpected error during upload:', error.message);
         alert('ไม่สามารถอัพโหลดโปสเตอร์ได้');
         return;
       }
-
-      // 2️⃣ สร้าง public URL สำหรับรูป
-      const { data: urlData } = supabase
-        .storage
-        .from('event-posters')
-        .getPublicUrl(filePath);
-
-      posterUrl = urlData.publicUrl;
-    } catch (error) {
-      console.error('❌ Unexpected error during upload:', error.message);
-      alert('ไม่สามารถอัพโหลดโปสเตอร์ได้');
-      return;
-    }
-  }
-
-  // 3️⃣ Insert ข้อมูล event พร้อมโปสเตอร์ URL
-  const { data, error } = await supabase
-    .from('events')
-    .insert([{
-      name: newEvent.name,
-      description: newEvent.description,
-      start_time: newEvent.start_time,
-      end_time: newEvent.end_time,
-      poster_url: posterUrl
-    }]);
-
-  if (error) {
-    console.error('❌ Error creating event:', error.message);
-    alert('เกิดข้อผิดพลาดในการสร้างอีเวนต์');
-  } else {
-    setShowModal(false);
-    setNewEvent({ name: '', description: '', start_time: '', end_time: '', poster: null });
-  }
-};
-
-const handleEdit = (event) => {
-  setEditingEvent({ ...event });
-  setShowEditModal(true); // Open the edit modal
-};
-
-const handleSaveEdit = async () => {
-  const { id, name, description, start_time, end_time, image } = editingEvent;
-
-  // Check if there's a new image file
-  let imageUrl = image; // Default to the current image if no new image is provided
-
-  if (newImageFile) {
-    // If a new image is selected, upload it
-    const { data, error: uploadError } = await supabase.storage
-      .from('event-posters') // Assuming the storage bucket is named "event-posters"
-      .upload(`event_${id}_${newImageFile.name}`, newImageFile);
-
-    if (uploadError) {
-      alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ: ' + uploadError.message);
-      return;
     }
 
-    // Get the URL of the uploaded image
-    imageUrl = data?.Key; // This gives the URL of the uploaded image
-  }
+    // 3️⃣ Insert ข้อมูล event พร้อมโปสเตอร์ URL
+    const { data, error } = await supabase
+      .from('events')
+      .insert([{
+        name: newEvent.name,
+        description: newEvent.description,
+        start_time: newEvent.start_time,
+        end_time: newEvent.end_time,
+        poster_url: posterUrl
+      }]);
 
-  // Now update the event record in the database
-  const { error } = await supabase
-    .from('events')
-    .update({
-      name,
-      description,
-      start_time,
-      end_time,
-      image: imageUrl, // Save the image URL
-    })
-    .eq('id', id);
+    if (error) {
+      console.error('❌ Error creating event:', error.message);
+      alert('เกิดข้อผิดพลาดในการสร้างอีเวนต์');
+    } else {
+      setShowModal(false);
+      setNewEvent({ name: '', description: '', start_time: '', end_time: '', poster: null });
+    }
+  };
 
-  if (error) {
-    alert('เกิดข้อผิดพลาดในการอัปเดต: ' + error.message);
-  } else {
-    setShowEditModal(false); // Close the edit modal
-    setEditingEvent(null); // Clear the editing event state
-    fetchEvents(); // Reload events
-  }
-};
+  const handleEdit = (event) => {
+    setEditingEvent({ ...event });
+    setShowEditModal(true); // Open the edit modal
+  };
+
+  const handleSaveEdit = async () => {
+    const { id, name, description, start_time, end_time, image } = editingEvent;
+
+    // Check if there's a new image file
+    let imageUrl = image; // Default to the current image if no new image is provided
+
+    if (newImageFile) {
+      // If a new image is selected, upload it
+      const { data, error: uploadError } = await supabase.storage
+        .from('event-posters') // Assuming the storage bucket is named "event-posters"
+        .upload(`event_${id}_${newImageFile.name}`, newImageFile);
+
+      if (uploadError) {
+        alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ: ' + uploadError.message);
+        return;
+      }
+
+      // Get the URL of the uploaded image
+      imageUrl = data?.Key; // This gives the URL of the uploaded image
+    }
+
+    // Now update the event record in the database
+    const { error } = await supabase
+      .from('events')
+      .update({
+        name,
+        description,
+        start_time,
+        end_time,
+        image: imageUrl, // Save the image URL
+      })
+      .eq('id', id);
+
+    if (error) {
+      alert('เกิดข้อผิดพลาดในการอัปเดต: ' + error.message);
+    } else {
+      setShowEditModal(false); // Close the edit modal
+      setEditingEvent(null); // Clear the editing event state
+      fetchEvents(); // Reload events
+    }
+  };
 
 
 
-const handleDelete = async (id) => {
-  const confirmDelete = window.confirm('คุณแน่ใจว่าต้องการลบอีเวนต์นี้หรือไม่?');
-  if (!confirmDelete) return;
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm('คุณแน่ใจว่าต้องการลบอีเวนต์นี้หรือไม่?');
+    if (!confirmDelete) return;
 
-  const { error } = await supabase
-    .from('events')
-    .delete()
-    .eq('id', id);
+    const { error } = await supabase
+      .from('events')
+      .delete()
+      .eq('id', id);
 
-  if (error) {
-    alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
-  } else {
-    fetchEvents(); // Reload events
-  }
-};
+    if (error) {
+      alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
+    } else {
+      fetchEvents(); // Reload events
+    }
+  };
 
- 
+
 
 
 
@@ -344,12 +344,14 @@ const handleDelete = async (id) => {
             </div>
             {/* File input for poster image */}
             <div className="mb-4">
-              <input
-                type="file"
-                onChange={handleFileChange}
-                className="w-full p-2 border rounded"
-              />
-            </div>
+  <input
+    type="file"
+    onChange={handleFileChange}
+    className="w-full p-2 border rounded"
+    accept="image/*" // Only allow image files
+  />
+</div>
+
             <div className="flex space-x-4">
               <button
                 onClick={handleCreateEvent}
@@ -467,72 +469,74 @@ const handleDelete = async (id) => {
 
         </table>
       </div>
-{/* Edit Event Modal */}
-{showEditModal && editingEvent && (
-  <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center">
-    <div className="bg-white p-6 rounded-lg shadow-lg w-100 sm:w-1/2">
-      <h3 className="text-2xl mb-4">แก้ไขอีเวนต์</h3>
-      <div className="mb-4">
-        <input
-          type="text"
-          name="name"
-          value={editingEvent.name}
-          onChange={(e) => setEditingEvent({ ...editingEvent, name: e.target.value })}
-          placeholder="ชื่ออีเวนต์"
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div className="mb-4">
-        <textarea
-          name="description"
-          value={editingEvent.description}
-          onChange={(e) => setEditingEvent({ ...editingEvent, description: e.target.value })}
-          placeholder="รายละเอียดอีเวนต์"
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">เวลาเริ่มและสิ้นสุด</label>
-        <input
-          type="datetime-local"
-          name="start_time"
-          value={editingEvent.start_time}
-          onChange={(e) => setEditingEvent({ ...editingEvent, start_time: e.target.value })}
-          className="w-full p-2 border rounded"
-        />
-        <input
-          type="datetime-local"
-          name="end_time"
-          value={editingEvent.end_time}
-          onChange={(e) => setEditingEvent({ ...editingEvent, end_time: e.target.value })}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      {/* Optionally, add a file input for poster image */}
-      <div className="mb-4">
-        <input
-          type="file"
-          onChange={(e) => handleFileChange(e)} // You can use the same handleFileChange function if needed
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div className="flex space-x-4">
-        <button
-          onClick={handleSaveEdit}
-          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-        >
-          บันทึก
-        </button>
-        <button
-          onClick={() => setShowEditModal(false)}
-          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-        >
-          ยกเลิก
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+      {/* Edit Event Modal */}
+      {showEditModal && editingEvent && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-100 sm:w-1/2">
+            <h3 className="text-2xl mb-4">แก้ไขอีเวนต์</h3>
+            <div className="mb-4">
+              <input
+                type="text"
+                name="name"
+                value={editingEvent.name}
+                onChange={(e) => setEditingEvent({ ...editingEvent, name: e.target.value })}
+                placeholder="ชื่ออีเวนต์"
+                className="w-full p-2 border rounded"
+              />
+            </div>
+            <div className="mb-4">
+              <textarea
+                name="description"
+                value={editingEvent.description}
+                onChange={(e) => setEditingEvent({ ...editingEvent, description: e.target.value })}
+                placeholder="รายละเอียดอีเวนต์"
+                className="w-full p-2 border rounded"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block mb-2 text-sm font-medium text-gray-700">เวลาเริ่มและสิ้นสุด</label>
+              <input
+                type="datetime-local"
+                name="start_time"
+                value={editingEvent.start_time}
+                onChange={(e) => setEditingEvent({ ...editingEvent, start_time: e.target.value })}
+                className="w-full p-2 border rounded"
+              />
+              <input
+                type="datetime-local"
+                name="end_time"
+                value={editingEvent.end_time}
+                onChange={(e) => setEditingEvent({ ...editingEvent, end_time: e.target.value })}
+                className="w-full p-2 border rounded"
+              />
+            </div>
+            {/* Optionally, add a file input for poster image */}
+            <div className="mb-4">
+              <input
+                type="file"
+                onChange={(e) => handleFileChange(e)} // You can use the same handleFileChange function if needed
+                className="w-full p-2 border rounded"
+                accept="image/*" // This ensures only image files can be selected
+              />
+            </div>
+
+            <div className="flex space-x-4">
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+              >
+                บันทึก
+              </button>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
