@@ -145,7 +145,7 @@ function EventBooking() {
                         <h3>กรอกข้อมูลการจอง</h3>
                         <input
                             type="text"
-                            placeholder="ชื่อ"
+                            placeholder="ชื่อเล่น"
                             value={name}
                             onChange={e => setName(e.target.value)}
                         />
