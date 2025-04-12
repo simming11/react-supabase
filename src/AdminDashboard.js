@@ -14,6 +14,9 @@ function AdminDashboard() {
   // Add the state for editing modal visibility
   const [showEditModal, setShowEditModal] = useState(false); // Fix: Add showEditModal state
   const [newImageFile, setNewImageFile] = useState(null); // State to store the new image file
+  const [visitorCount, setVisitorCount] = useState(null); // จำนวนผู้เข้าชม path นี้
+  const [totalVisitorCount, setTotalVisitorCount] = useState(null); // จำนวนผู้เข้าชมทั้งหมด
+  const [timeFilter, setTimeFilter] = useState('all'); // ช่วงเวลาที่เลือก (all, hour, day, week, month, year)
 
   const [newEvent, setNewEvent] = useState({
     name: '',
@@ -70,6 +73,7 @@ function AdminDashboard() {
 
     fetchUserAndInitialData();
 
+
     // ✅ Realtime subscription: reservations
     const reservationChannel = supabase
       .channel('realtime:reservations')
@@ -102,6 +106,68 @@ function AdminDashboard() {
       supabase.removeChannel(eventsChannel);
     };
   }, [currentPage]);
+
+  // ฟังก์ชันสำหรับการคำนวณวันที่ตามช่วงเวลา
+  const getStartDate = (filter) => {
+    const currentDate = new Date();
+    switch (filter) {
+      case 'hour':
+        currentDate.setHours(currentDate.getHours() - 1);
+        break;
+      case 'day':
+        currentDate.setDate(currentDate.getDate() - 1);
+        break;
+      case 'week':
+        currentDate.setDate(currentDate.getDate() - 7);
+        break;
+      case 'month':
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        break;
+      case 'year':
+        currentDate.setFullYear(currentDate.getFullYear() - 1);
+        break;
+      default:
+        break;
+    }
+    return currentDate.toISOString();
+  };
+
+  // useEffect สำหรับการดึงจำนวนผู้เข้าชมทั้งหมด
+  useEffect(() => {
+    const fetchTotalVisitorCount = async () => {
+      const { count, error } = await supabase
+        .from('visitors')
+        .select('*', { count: 'exact', head: true })
+        .gte('timestamp', getStartDate(timeFilter)); // ใช้เวลาในการกรองข้อมูล
+
+      if (error) {
+        console.error('Error fetching total visitor count:', error.message);
+      } else {
+        setTotalVisitorCount(count);
+      }
+    };
+
+    fetchTotalVisitorCount();
+  }, [timeFilter]); // รันใหม่เมื่อมีการเปลี่ยนแปลงเวลา
+
+  // useEffect สำหรับการดึงจำนวนผู้เข้าชม path /speech-to-text
+  useEffect(() => {
+    const fetchVisitorCount = async () => {
+      const { count, error } = await supabase
+        .from('visitors')
+        .select('*', { count: 'exact', head: true })
+        .eq('path', '/speech-to-text') // นับเฉพาะ path นี้
+        .gte('timestamp', getStartDate(timeFilter)); // ใช้เวลาในการกรองข้อมูล
+
+      if (error) {
+        console.error('Error fetching visitor count for /speech-to-text:', error.message);
+      } else {
+        setVisitorCount(count);
+      }
+    };
+
+    fetchVisitorCount();
+  }, [timeFilter]); // รันใหม่เมื่อมีการเปลี่ยนแปลงเวลา
 
   // Handle input changes
   const handleEventChange = (e) => {
@@ -274,8 +340,8 @@ function AdminDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-semibold">ข้อมูลการจองทั้งหมด</h2>
+            <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-semibold"></h2>
         {user ? (
           <div className="flex items-center space-x-4">
             <span className="text-lg">{user.username}</span>
@@ -289,6 +355,45 @@ function AdminDashboard() {
         ) : (
           <span>ไม่ได้เข้าสู่ระบบ</span>
         )}
+      </div>
+      <div className="p-4 text-center">
+      <div className="p-6 text-center bg-white rounded-lg shadow-md">
+  {/* ตัวเลือกสำหรับกรองตามเวลา */}
+  <div className="mb-6">
+    <h2 className="text-xl font-semibold text-gray-700 mb-2">กรองจำนวนผู้เข้าชมตามเวลา:</h2>
+    <select
+      value={timeFilter}
+      onChange={(e) => setTimeFilter(e.target.value)}
+      className="px-6 py-2 mt-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="all">ทั้งหมด</option>
+      <option value="hour">1 ชั่วโมง</option>
+      <option value="day">1 วัน</option>
+      <option value="week">7 วัน</option>
+      <option value="month">1 เดือน</option>
+      <option value="year">1 ปี</option>
+    </select>
+  </div>
+
+  {/* จำนวนผู้เข้าชมทั้งหมด */}
+  <div className="flex justify-between gap-8 items-center bg-gray-50 p-6 rounded-lg shadow-inner">
+    <div className="flex-1 text-center">
+      <h2 className="text-xl font-semibold text-gray-700 mb-2">จำนวนผู้เข้าชมทั้งหมด:</h2>
+      <p className="text-3xl font-bold text-blue-600">
+        {totalVisitorCount !== null ? totalVisitorCount : 'กำลังโหลด...'}
+      </p>
+    </div>
+
+    {/* จำนวนผู้เข้าชมของ path /speech-to-text */}
+    <div className="flex-1 text-center">
+      <h2 className="text-xl font-semibold text-gray-700 mb-2">จำนวนผู้เข้าชมหน้านี้:</h2>
+      <p className="text-3xl font-bold text-blue-600">
+        {visitorCount !== null ? visitorCount : 'กำลังโหลด...'}
+      </p>
+    </div>
+  </div>
+</div>
+
       </div>
 
       {/* Button to create new event */}
@@ -344,13 +449,13 @@ function AdminDashboard() {
             </div>
             {/* File input for poster image */}
             <div className="mb-4">
-  <input
-    type="file"
-    onChange={handleFileChange}
-    className="w-full p-2 border rounded"
-    accept="image/*" // Only allow image files
-  />
-</div>
+              <input
+                type="file"
+                onChange={handleFileChange}
+                className="w-full p-2 border rounded"
+                accept="image/*" // Only allow image files
+              />
+            </div>
 
             <div className="flex space-x-4">
               <button

@@ -1,15 +1,33 @@
 // src/home.js
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from './supabaseClient'; // ✅ เพิ่ม supabase
 
 const Home = () => {
+    useEffect(() => {
+        const logVisit = async () => {
+            try {
+                await supabase.from('visitors').insert([
+                    {
+                        path: window.location.pathname,
+                        user_agent: navigator.userAgent,
+                        timestamp: new Date().toISOString(),
+                    },
+                ]);
+            } catch (error) {
+                console.error('Error logging visitor:', error.message);
+            }
+        };
+
+        logVisit();
+    }, []);
+
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gray-100">
             {/* หัวข้อหลัก */}
             <h1 className="text-3xl font-semibold mb-4 text-blue-700 text-center py-6 border-b-4 border-blue-500 bg-blue-50">
-  Explore Our Queue Management & Service Systems
-</h1>
-
+                Explore Our Queue Management & Service Systems
+            </h1>
 
             <p className="text-xl text-center mb-8 px-6 text-gray-700">
                 ระบบนี้ช่วยให้คุณสามารถจองคิวสำหรับบริการต่างๆ ได้อย่างสะดวกและรวดเร็ว เพียงแค่เลือกบริการที่คุณต้องการ
@@ -18,8 +36,7 @@ const Home = () => {
 
             {/* การอธิบายบริการต่างๆ ในระบบ */}
             <div className="flex flex-col sm:flex-row gap-8 sm:gap-16 p-6 justify-center items-center">
-
-                {/* ปุ่มไปที่ Speech-to-Text */}
+                {/* ปุ่ม Speech to Text */}
                 <div className="text-center bg-white p-6 rounded-lg shadow-lg hover:shadow-2xl transition duration-300">
                     <h2 className="text-2xl font-semibold mb-2 text-blue-600">Speech to Text</h2>
                     <p className="mb-4 text-gray-600">
@@ -33,7 +50,7 @@ const Home = () => {
                     </Link>
                 </div>
 
-                {/* ปุ่มไปที่ Event Booking */}
+                {/* ปุ่ม Event Booking */}
                 <div className="text-center bg-white p-6 rounded-lg shadow-lg hover:shadow-2xl transition duration-300">
                     <h2 className="text-2xl font-semibold mb-2 text-green-600">Event Booking</h2>
                     <p className="mb-4 text-gray-600">

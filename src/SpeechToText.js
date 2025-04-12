@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-
+import { supabase } from './supabaseClient';
 const SpeechToText = () => {
   const [transcript, setTranscript] = useState([]); // เก็บข้อความที่แปลงจากเสียงเป็น Array
   const [isRecording, setIsRecording] = useState(false); // สถานะการบันทึก
@@ -39,6 +39,21 @@ const SpeechToText = () => {
       }
     };
   }, [language]); // useEffect จะทำงานใหม่เมื่อภาษาถูกเปลี่ยน
+
+  useEffect(() => {
+    const logVisitor = async () => {
+      const res = await supabase.from('visitors').insert([
+        {
+          path: '/speech-to-text',
+          user_agent: navigator.userAgent,
+        }
+      ]);
+      if (res.error) console.error('Error logging visitor:', res.error.message);
+    };
+  
+    logVisitor();
+  }, []);
+  
 
   // ฟังก์ชันเริ่มบันทึก
   const startRecording = () => {

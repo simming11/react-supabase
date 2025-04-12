@@ -9,7 +9,7 @@ import Login from './Login';
 import ProtectedRoute from './ProtectedRoute';
 import SpeechToText from './SpeechToText'; // ใช้ตำแหน่งที่เก็บ component
 import Home from './home'; // เพิ่มการ import หน้า Home.js
-
+import VisitorChart from './VisitorChart'; // Import the VisitorChart component
 function App() {
   return (
     <Router>
@@ -33,6 +33,7 @@ function App() {
             />
             <Route path="/speech-to-text" element={<SpeechToText />} />
             <Route path="/event-booking" element={<EventBooking />} />
+            <Route path="/Chart" element={<VisitorChart />} />
           </Routes>
         </main>
       </div>
