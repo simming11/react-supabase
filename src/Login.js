@@ -48,10 +48,10 @@ function Login() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
     
-        localStorage.setItem('adminUser', JSON.stringify({ id: session.user.id, username: session.user.user_metadata.full_namel }));
+        localStorage.setItem('adminUser', JSON.stringify({ id: session.user.id, username: session.user.user_metadata.full_name}));
         navigate('/admin');
       }
-    });
+    });wb
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
