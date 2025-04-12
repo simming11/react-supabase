@@ -63,6 +63,19 @@ const Home = () => {
                         </button>
                     </Link>
                 </div>
+                {/* ปุ่ม Animal Classifier */}
+                <div className="text-center bg-white p-6 rounded-lg shadow-lg hover:shadow-2xl transition duration-300">
+                    <h2 className="text-2xl font-semibold mb-2 text-purple-600">Animal Classifier</h2>
+                    <p className="mb-4 text-gray-600">
+                        วิเคราะห์ภาพสัตว์และระบุประเภทเบื้องต้นด้วย AI เพียงวางลิงก์รูปภาพแล้วให้ระบบช่วยประมวลผลให้คุณ!
+                    </p>
+                    <Link to="/animal-classifier">
+                        <button className="px-6 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition duration-300">
+                            Go to Animal Classifier
+                        </button>
+                    </Link>
+                </div>
+
             </div>
         </div>
     );
