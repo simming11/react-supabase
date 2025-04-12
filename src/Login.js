@@ -36,11 +36,12 @@ function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/login`
+        redirectTo: `${window.location.origin}/login` // หรือ URL ที่เหมาะสมกับแอปของคุณ
       }
     });
     if (error) console.error('Google login failed:', error.message);
   };
+  
 
   // ตรวจจับการ login สำเร็จจาก Google
   useEffect(() => {
@@ -51,7 +52,7 @@ function Login() {
         localStorage.setItem('adminUser', JSON.stringify({ id: session.user.id, username: session.user.user_metadata.full_name}));
         navigate('/admin');
       }
-    });wb
+    });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {

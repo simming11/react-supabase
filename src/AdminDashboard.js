@@ -344,7 +344,7 @@ function AdminDashboard() {
         <h2 className="text-3xl font-semibold"></h2>
         {user ? (
           <div className="flex items-center space-x-4">
-            <span className="text-lg">{user.username || user.username.user_metadata.name}</span>
+            <span className="text-lg">{user.username || user.username.user_metadata.full_name}</span>
 
             <button
               onClick={handleLogout}
