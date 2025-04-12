@@ -5,32 +5,52 @@ function AnimalClassifier() {
   const [result, setResult] = useState(null);
 
   const classifyAnimal = async () => {
-    const response = await fetch(
-      "https://api.clarifai.com/v2/models/e0be3b9d6a454f0493ac3a30784001ff/outputs",
-      {
-        method: "POST",
-        headers: {
-            Authorization: "Key 7264f73edfed46449a7ea09365a3fdd6",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: [
-            {
-              data: {
-                image: {
-                  url: imageUrl,
+    if (!imageFile) return;
+    const base64Image = await fileToBase64(imageFile);
+  
+    try {
+      const response = await fetch(
+        "https://api.clarifai.com/v2/models/e0be3b9d6a454f0493ac3a30784001ff/outputs",
+        {
+          method: "POST",
+          headers: {
+            Authorization: "Key 7264f73edfed46449a7ea09365a3fdd6", // เปลี่ยนเป็น API Key ของคุณ
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_app_id: {
+              user_id: "clarifai",  // ✅ หากไม่ได้สร้าง project ใหม่ จะใช้ค่า default นี้ได้เลย
+              app_id: "main",
+            },
+            inputs: [
+              {
+                data: {
+                  image: {
+                    base64: base64Image,
+                  },
                 },
               },
-            },
-          ],
-        }),
+            ],
+          }),
+        }
+      );
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        console.error("Clarifai error:", data);
+        alert("❌ วิเคราะห์ไม่สำเร็จ: " + (data.status?.description || "Unknown Error"));
+        return;
       }
-    );
-
-    const data = await response.json();
-    const concepts = data.outputs?.[0]?.data?.concepts || [];
-    setResult(concepts);
+  
+      const concepts = data.outputs?.[0]?.data?.concepts || [];
+      setResult(concepts);
+    } catch (error) {
+      console.error("Fetch error:", error);
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับ Clarifai");
+    }
   };
+  
 
   return (
     <div className="p-4 max-w-md mx-auto">
