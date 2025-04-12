@@ -87,7 +87,7 @@ function Payment() {
             if (!slipRes.ok) {
                 console.error('❌ Error creating slip:', slipData.message);
             } else {
-                console.log('✅ Slip created successfully:', slipData);
+            
                 // คุณอาจเก็บ slipData.id หรือ slipData.url ลง Supabase ได้ด้วย
             }
         } catch (err) {

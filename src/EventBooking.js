@@ -38,7 +38,7 @@ function EventBooking() {
                     table: 'events',
                 },
                 (payload) => {
-                    console.log('📡 Realtime event payload:', payload);
+                 
                     fetchEvents(); // รีโหลดใหม่เมื่อมีการเปลี่ยนแปลง
                 }
             )

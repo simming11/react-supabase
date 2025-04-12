@@ -64,7 +64,7 @@ function AdminDashboard() {
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       } else {
-        console.log('No user found in localStorage');
+       
       }
 
       await fetchReservations(); // ดึงจองตอนโหลด
@@ -82,7 +82,7 @@ function AdminDashboard() {
         schema: 'public',
         table: 'reservations',
       }, (payload) => {
-        console.log('🔄 reservations changed:', payload);
+    
         fetchReservations(); // re-fetch
       })
       .subscribe();
@@ -95,7 +95,7 @@ function AdminDashboard() {
         schema: 'public',
         table: 'events',
       }, (payload) => {
-        console.log('🔄 events changed:', payload);
+      
         fetchEvents(); // re-fetch
       })
       .subscribe();
@@ -340,11 +340,12 @@ function AdminDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-semibold"></h2>
         {user ? (
           <div className="flex items-center space-x-4">
-            <span className="text-lg">{user.username}</span>
+            <span className="text-lg">{user.username || user.username.user_metadata.name}</span>
+
             <button
               onClick={handleLogout}
               className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
@@ -357,42 +358,42 @@ function AdminDashboard() {
         )}
       </div>
       <div className="p-4 text-center">
-      <div className="p-6 text-center bg-white rounded-lg shadow-md">
-  {/* ตัวเลือกสำหรับกรองตามเวลา */}
-  <div className="mb-6">
-    <h2 className="text-xl font-semibold text-gray-700 mb-2">กรองจำนวนผู้เข้าชมตามเวลา:</h2>
-    <select
-      value={timeFilter}
-      onChange={(e) => setTimeFilter(e.target.value)}
-      className="px-6 py-2 mt-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-    >
-      <option value="all">ทั้งหมด</option>
-      <option value="hour">1 ชั่วโมง</option>
-      <option value="day">1 วัน</option>
-      <option value="week">7 วัน</option>
-      <option value="month">1 เดือน</option>
-      <option value="year">1 ปี</option>
-    </select>
-  </div>
+        <div className="p-6 text-center bg-white rounded-lg shadow-md">
+          {/* ตัวเลือกสำหรับกรองตามเวลา */}
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">กรองจำนวนผู้เข้าชมตามเวลา:</h2>
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="px-6 py-2 mt-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">ทั้งหมด</option>
+              <option value="hour">1 ชั่วโมง</option>
+              <option value="day">1 วัน</option>
+              <option value="week">7 วัน</option>
+              <option value="month">1 เดือน</option>
+              <option value="year">1 ปี</option>
+            </select>
+          </div>
 
-  {/* จำนวนผู้เข้าชมทั้งหมด */}
-  <div className="flex justify-between gap-8 items-center bg-gray-50 p-6 rounded-lg shadow-inner">
-    <div className="flex-1 text-center">
-      <h2 className="text-xl font-semibold text-gray-700 mb-2">จำนวนผู้เข้าชมทั้งหมด:</h2>
-      <p className="text-3xl font-bold text-blue-600">
-        {totalVisitorCount !== null ? totalVisitorCount : 'กำลังโหลด...'}
-      </p>
-    </div>
+          {/* จำนวนผู้เข้าชมทั้งหมด */}
+          <div className="flex justify-between gap-8 items-center bg-gray-50 p-6 rounded-lg shadow-inner">
+            <div className="flex-1 text-center">
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">จำนวนผู้เข้าชมทั้งหมด:</h2>
+              <p className="text-3xl font-bold text-blue-600">
+                {totalVisitorCount !== null ? totalVisitorCount : 'กำลังโหลด...'}
+              </p>
+            </div>
 
-    {/* จำนวนผู้เข้าชมของ path /speech-to-text */}
-    <div className="flex-1 text-center">
-      <h2 className="text-xl font-semibold text-gray-700 mb-2">จำนวนผู้เข้าชมหน้านี้:</h2>
-      <p className="text-3xl font-bold text-blue-600">
-        {visitorCount !== null ? visitorCount : 'กำลังโหลด...'}
-      </p>
-    </div>
-  </div>
-</div>
+            {/* จำนวนผู้เข้าชมของ path /speech-to-text */}
+            <div className="flex-1 text-center">
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">จำนวนผู้เข้าชมหน้านี้:</h2>
+              <p className="text-3xl font-bold text-blue-600">
+                {visitorCount !== null ? visitorCount : 'กำลังโหลด...'}
+              </p>
+            </div>
+          </div>
+        </div>
 
       </div>
 

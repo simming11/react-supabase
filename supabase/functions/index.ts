@@ -4,7 +4,7 @@
 
 import { corsHeaders } from '../_shared/cors.ts'
 
-console.log(`Function "browser-with-cors" up and running!`)
+// console.log(`Function "browser-with-cors" up and running!`)
 
 Deno.serve(async (req) => {
   // This is needed if you're planning to invoke your function from a browser.

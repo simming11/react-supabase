@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import bcrypt from 'bcryptjs';
 import { useNavigate } from 'react-router-dom';
@@ -8,34 +8,63 @@ function Login() {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
+  // ฟังก์ชัน Login แบบปกติ
   const handleLogin = async () => {
-    // ดึง user จาก Supabase
     const { data, error } = await supabase
-      .from('admins')  // เปลี่ยนจาก 'users' เป็น 'admins'
+      .from('admins')
       .select('id, username, password_hash')
       .eq('username', username)
       .single();
 
     if (error || !data) {
-      alert('ไม่พบผู้ใช้หรือชื่อผู้ใช้ไม่ถูกต้อง');
+      alert('ผู้ใช้ไม่ถูกต้อง');
       return;
     }
 
-    // ใช้ bcrypt เพื่อเปรียบเทียบรหัสผ่านที่ผู้ใช้ป้อนกับรหัสผ่านที่เก็บในฐานข้อมูล
     const isValid = await bcrypt.compare(password, data.password_hash);
-
     if (!isValid) {
       alert('รหัสผ่านไม่ถูกต้อง');
       return;
     }
 
-    // เก็บสถานะ login ใน localStorage หรือ context
     localStorage.setItem('adminUser', JSON.stringify({ id: data.id, username: data.username }));
-
-    // หลังจากเข้าสู่ระบบสำเร็จ ไปที่หน้าผู้ดูแลระบบ (admin)
-    // alert('เข้าสู่ระบบสำเร็จ');
-    navigate('/admin');  // เปลี่ยนไปยังหน้าผู้ดูแลระบบ
+    navigate('/admin');
   };
+
+  // ฟังก์ชัน Login ด้วย Google
+  const loginWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/login`
+      }
+    });
+    if (error) console.error('Google login failed:', error.message);
+  };
+
+  // ตรวจจับการ login สำเร็จจาก Google
+  useEffect(() => {
+    // This will check if the user is logged in via Google
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+    
+        localStorage.setItem('adminUser', JSON.stringify({ id: session.user.id, username: session.user.user_metadata.full_namel }));
+        navigate('/admin');
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+
+        localStorage.setItem('adminUser', JSON.stringify({ id: session.user.id, username: session.user.user_metadata.full_name}));
+        navigate('/admin');
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -57,9 +86,16 @@ function Login() {
         />
         <button
           onClick={handleLogin}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 mb-3"
         >
           เข้าสู่ระบบ
+        </button>
+
+        <button
+          onClick={loginWithGoogle}
+          className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"
+        >
+          Login with Google
         </button>
       </div>
     </div>

@@ -28,7 +28,7 @@ function ReservationQR() {
                 setReservation(data);
             }
             setLoading(false);  // End loading
-            console.log('Fetched reservation data:', data);
+           
         };
 
         fetchReservationData();
